@@ -8,3 +8,8 @@ GET     /                           controllers.HomeController.index
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+
+GET  /mascotas  controllers.HomeController.getMascotas
+POST  /insertar  controllers.HomeController.insertarMascota
+PUT  /actualizar  controllers.HomeController.actualizarMascota
+DELETE  /eliminar/:id  controllers.HomeController.removerMascota(id: Int)
