@@ -19,3 +19,4 @@ GET  /mascotasSQL  controllers.HomeController.getMascotasSQL
 POST  /insertarSQL  controllers.HomeController.insertarMascotaSQL
 PUT  /actualizarSQL  controllers.HomeController.actualizarMascotaSQL
 DELETE  /eliminarSQL/:id  controllers.HomeController.removerMascotaSQL(id: Int)
+GET /mascotaById/:id controllers.HomeController.getMascotaById(id:Int)

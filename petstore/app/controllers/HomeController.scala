@@ -201,8 +201,30 @@ def insertarMascotaSQL = Action { implicit request =>
   }
 }
 
+  //Ejercicio propuesto
 
+  def getMascotaById(id:Int) = Action {
+  // En primer lugar creamos una variable para realizar la conexion con la BD
+  val conexion = db.getConnection()
 
+  mascotas = List[Pet]()
+  
+  try{
+  // Ahora creamos una variable en donde formulamos nuestra query SQL de búsqueda y la ejecutamos
+    val query = conexion.createStatement
+    val resultado = query.executeQuery("SELECT * FROM pet WHERE id = "+id)
+    while (resultado.next()) {
+      var p = Pet(resultado.getInt("id"), resultado.getString("name"), resultado.getString("kind"), resultado.getString("gender"), resultado.getString("location"), resultado.getString("state"))
+      mascotas = mascotas :+ p
+    }
+  }
+  finally{
+    conexion.close()
+    }
+  val jsonAux = Json.toJson(mascotas)
+  Ok(jsonAux)
+  }
+  
 }
 
 
