@@ -5,12 +5,13 @@ import play.api._
 import play.api.mvc._
 import play.api.libs.json._
 import models.Pet
+import play.api.db._
 
 
 
 
 @Singleton
-class HomeController @Inject()(cc: ControllerComponents) extends AbstractController(cc) {
+class HomeController @Inject()(db: Database, cc: ControllerComponents) extends AbstractController(cc) {
 
   var mascotas = List[Pet](
   Pet(1, "Neron", "Bulldog", "M", "Calle 48 No.48-12", "P"),
@@ -83,6 +84,124 @@ class HomeController @Inject()(cc: ControllerComponents) extends AbstractControl
     case e:JsError => BadRequest("No se pudo actualizar porque hay malos parametros!!")
     }
   }
+
+  //PARA SQL
+  def getMascotasSQL = Action {
+  // En primer lugar creamos una variable para realizar la conexion con la BD
+  val conexion = db.getConnection()
+  
+  // A continuación inicializamos (vaciamos) la lista con la que procesaremos los datos que lleguen de la BD
+  mascotas = List[Pet]()
+    
+  try{
+  // Ahora creamos una variable en donde formulamos nuestra query SQL de búsqueda y la ejecutamos
+    val query = conexion.createStatement
+    val resultado = query.executeQuery("SELECT * FROM pet")
+      
+    // Ya con el resultado de la consulta, creamos objetos mascota y los agregamos a la lista de apoyo
+    while (resultado.next()) {
+      var p = Pet(resultado.getInt("id"), resultado.getString("name"), resultado.getString("kind"), resultado.getString("gender"), resultado.getString("location"), resultado.getString("state"))
+      mascotas = mascotas :+ p
+    }
+  }
+  finally{
+    // Antes de retornar los resultados, cerramos la conexión a la BD
+    conexion.close()
+  }
+    
+  val jsonAux = Json.toJson(mascotas) // Finalmente, se Jsifican los resultados
+  Ok(jsonAux) // Y se retorna la lista de mascotas Jsificada
+  }
+
+  // Método para eliminar la mascota indicada de la BD
+  def removerMascotaSQL(id: Int) = Action {
+    // En primer lugar creamos una variable para realizar la conexión con la BD
+    val conexion = db.getConnection()
+      
+    try{
+      // Después creamos una variable en donde formulamos nuestra query SQL de eliminación y la ejecutamos
+      val query = conexion.createStatement
+      val resultado = query.executeUpdate("DELETE FROM pet WHERE id = " + id)
+    }
+    finally{
+      // Antes de terminar, cerramos la conexión a la BD
+      conexion.close()
+    }
+      
+    // Y para terminar indicamos que se realizó la operación correctamente
+    Ok("La mascota ha sido eliminada exitosamente!")
+  }
+
+  // Método para actualizar la información de la mascota indicada en la BD
+def actualizarMascotaSQL = Action { implicit request =>
+  val cuerpoJson = request.body.asJson.get // En primer lugar se recupera el cuerpo del mensaje el cual debe contener el json con la información a actualizar
+  
+  // Luego, se valida que lo que se obtuve si es un json que corresponda con un objeto tipo Pet
+  cuerpoJson.validate[Pet] match {
+    // En caso de éxito entonces
+    case success: JsSuccess[Pet] =>
+      // Se crea un nuevo objeto mascota a partir de la información que me llego
+      var nuevaMascota = Pet(success.get.id, success.get.name, success.get.kind, success.get.gender, success.get.location, success.get.state)
+     
+      // También, creamos una variable para realizar la conexión con la BD
+      val conexion = db.getConnection()
+        
+      try{
+        // Después creamos una variable en donde formulamos nuestra query SQL de actualización y la ejecutamos
+        val query = conexion.createStatement
+        val resultado = query.executeUpdate("UPDATE pet SET name = '"+nuevaMascota.name+"', kind = '"+nuevaMascota.kind+"', gender = '"+nuevaMascota.gender+"', location = '"+nuevaMascota.location+"',state = '"+nuevaMascota.state+"' WHERE id = "+nuevaMascota.id)
+      }
+      finally{
+        // Posterior , cerramos la conexión a la BD
+        conexion.close()
+      }
+        
+      // Y para terminar indicamos que se realizó la operación correctamente
+      Ok("La mascota ha sido actualizada exitosamente!")
+        
+    // En caso de error entonces devuelvo un mensajito
+    case e:JsError => BadRequest("No se pudo actualizar porque hay malos parametros!!")
+  }
+}
+
+// Método para agregar una nueva mascota en la BD
+def insertarMascotaSQL = Action { implicit request =>
+  val cuerpoJson = request.body.asJson.get // En primer lugar se recupera el cuerpo del mensaje el cual debe contener el json con la información de la mascota a ingresar a la lista
+
+  // Luego, se valida que lo que se obtuvo si es un json que corresponda con un objeto tipo Pet
+  cuerpoJson.validate[Pet] match {
+    // En caso de éxito entonces
+    case success: JsSuccess[Pet] =>
+      // Creó un nuevo objeto mascota a partir de la información que me llego
+      var nuevaMascota = Pet(success.get.id, success.get.name, success.get.kind, success.get.gender, success.get.location, success.get.state)
+        
+      // También, creamos una variable para realizar la conexión con la BD
+      val conexion = db.getConnection()
+        
+      try{
+        // Después creamos una variable en donde formulamos nuestra query SQL de inserción y la ejecutamos
+        val query = conexion.createStatement
+        val resultado = query.executeUpdate("INSERT INTO pet VALUES("+nuevaMascota.id+",'"+nuevaMascota.name+"','"+nuevaMascota.kind+"','"+nuevaMascota.gender+"','"+nuevaMascota.location+"','"+nuevaMascota.state+"')")
+          
+        // Si todo es correcto mostramos un mensaje de éxito
+        Ok("La mascota ha sido ingresada exitosamente!")
+      }
+      catch
+      {
+        // En caso que pase algo mostramos un mensaje de error
+        case e: Exception => Ok("No se puede insertar la mascota porque la clave indicada ya existe o hubo un error.")
+      }
+      finally{
+        // Finalmente, cerramos la conexión a la BD
+        conexion.close()
+      }
+        
+    // En caso de error entonces devuelvo un mensajito
+    case e:JsError => BadRequest("No se pudo actualizar porque hay malos parametros!!")
+  }
+}
+
+
 
 }
 
